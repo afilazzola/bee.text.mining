@@ -1,0 +1,247 @@
+
+
+
+### Text mining
+
+
+
+### Load Libraries and data
+```{r}
+
+library(tidyverse)
+library(tidytext)
+#library(qdap)
+
+#data <- read.csv("text.data.csv")
+data <- read.csv("long.data.csv")
+```
+
+
+### Simple plots
+```{r}
+level.n <- data %>% filter(level!="?") %>% group_by(Subgenus, level) %>% count(level)
+
+ggplot(level.n, aes(Subgenus,fill=level, y=n)) +  geom_bar(stat="identity", color="black")+scale_fill_manual(values=c("#FF9912","#BDB76B","#65909A")) +theme_bw() +coord_flip() +theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + ylab("count")+ scale_y_continuous(expand = c(0, 0), limits = c(0, 160)) 
+
+habitat.n <- data %>% filter(Habitat!="?") %>% group_by(Subgenus, Habitat) %>% count(Habitat)
+
+ggplot(habitat.n, aes(Subgenus,fill=Habitat, y=n)) +  geom_bar(stat="identity", color="black") +scale_fill_manual(values=c("#BDB76B","#65909A","#FF9912","#A68064","#48426C","#B7C3D0")) +theme_bw() +coord_flip() +theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + ylab("count")+ 
+scale_y_continuous(expand = c(0, 0), limits = c(0, 160)) 
+```
+### Plots with revised patch data
+```{r}
+data2 <- read.csv("Revised data with patch.csv")
+
+## compare level
+
+data.lvl <- data2 %>%  mutate(ground.location = strsplit(as.character(ground.location), " and ")) %>% unnest(ground.location)
+data.lvl <- cbind(data.lvl[,c("uniqueID","subgenus","ground.location")])
+
+
+level.n <- data.lvl %>% filter(ground.location!="N/A") %>% group_by(subgenus, ground.location) %>% count(ground.location)
+
+lvl1 <- ggplot(level.n, aes(subgenus,fill=ground.location, y=n)) +  geom_bar(stat="identity", color="black")+scale_fill_manual(values=c("#FF9912","#BDB76B","#65909A")) +theme_bw() +coord_flip() +theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + ylab("count")+ scale_y_continuous(expand = c(0, 0), limits = c(0, 30))  +theme(legend.title=element_blank())+ theme(axis.text=element_text(colour="black", size=14),text=element_text(colour="black", size=14)) + xlab("")
+
+data.plvl <- data2 %>%  mutate(level.pref = strsplit(as.character(level.pref), " and ")) %>% unnest(level.pref)
+data.plvl <- cbind(data.plvl[,c("uniqueID","subgenus","level.pref")])
+data.plvl <- data.plvl[!duplicated(data.plvl ), ]
+
+plevel.n <- data.plvl %>% filter(level.pref!="?") %>% group_by(subgenus, level.pref) %>% count(level.pref)
+
+lvl2 <- ggplot(plevel.n, aes(subgenus,fill=level.pref, y=n)) +  geom_bar(stat="identity", color="black")+scale_fill_manual(values=c("#FF9912","#BDB76B","#65909A")) +theme_bw() +coord_flip() +theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + ylab("count")+ scale_y_continuous(expand = c(0, 0), limits = c(0, 30)) 
+
+require(gridExtra)
+
+grid.arrange(lvl1,lvl2, ncol=2)
+
+
+
+data.lnd <- data2 %>%  mutate(Site.Landscape = strsplit(as.character(Site.Landscape), " and ")) %>% unnest(Site.Landscape)
+data.lnd <- cbind(data.lnd[,c("uniqueID","subgenus","Site.Landscape")])
+
+
+land.n <- data.lnd %>% group_by(subgenus, Site.Landscape) %>% count(Site.Landscape)
+
+ggplot(land.n, aes(subgenus,fill=Site.Landscape, y=n)) +  geom_bar(stat="identity", color="black") +scale_fill_manual(values=c("#BDB76B","#65909A","#FF9912","#A68064","#48426C","#B7C3D0","Grey50","Grey80")) +theme_bw() +coord_flip() +theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + ylab("count")+ 
+scale_y_continuous(expand = c(0, 0), limits = c(0, 35)) 
+
+
+data.plnd <- data2 %>%  mutate(preferred.landscape = strsplit(as.character(preferred.landscape), " and ")) %>% unnest(preferred.landscape)
+data.plnd <- cbind(data.plnd[,c("uniqueID","subgenus","preferred.landscape")])
+
+
+pland.n <- data.plnd  %>% group_by(subgenus, preferred.landscape) %>% count(preferred.landscape)
+
+lvl2 <- ggplot(pland.n, aes(subgenus,fill=preferred.landscape, y=n)) +  geom_bar(stat="identity", color="black")+scale_fill_manual(values=c("#BDB76B","#65909A","#FBEC5D","#A68064","#48426C","#B7C3D0","#CD7054"	,"#4E78A0","Grey65"))+theme_bw() +coord_flip() +theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + ylab("count")+ scale_y_continuous(expand = c(0, 0), limits = c(0, 45)) +theme(legend.title=element_blank())+ theme(axis.text=element_text(colour="black", size=14),text=element_text(colour="black", size=14)) + xlab("")
+
+require(gridExtra)
+
+grid.arrange(lvl1,lvl2, ncol=2)
+
+
+```
+
+### Habitat by plot
+```{r}
+data2 <- read.csv("Revised data with patch.csv")
+
+## compare level
+
+data.lnd <- data2 %>%  mutate(preferred.landscape = strsplit(as.character(preferred.landscape), " and ")) %>% unnest(preferred.landscape)
+
+data.lvl <- data.lnd %>%  mutate(ground.location = strsplit(as.character(ground.location), " and ")) %>% unnest(ground.location) %>% filter(ground.location!="N/A")
+
+
+data.lvl <- cbind(data.lvl[,c("uniqueID","Species","preferred.landscape","ground.location")])
+
+data.total <- data.lvl %>% group_by(ground.location, preferred.landscape) %>% count(preferred.landscape)
+
+
+lnd.lvl <- ggplot(data.total, aes(preferred.landscape,fill=ground.location, y=n)) +  geom_bar(stat="identity", color="black")+scale_fill_manual(values=c("#FF9912","#BDB76B","#65909A"))+theme_bw() +coord_flip() +theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + ylab("count")+ scale_y_continuous(expand = c(0, 0), limits = c(0, 45)) +theme(legend.title=element_blank())+ theme(axis.text=element_text(colour="black", size=14),text=element_text(colour="black", size=14)) + xlab("")
+
+```
+
+
+### Clean up text
+```{r}
+
+text_df <- data_frame(text=as.character(data$Habitat.summary))
+
+word.count <- text_df %>% unnest_tokens(word,text) %>%  dplyr::count(word, sort=T) ## count words
+
+## list stop words
+stopwords <- c(stop_words$word, "studies", "areas", "found", "also", "nest","nests","surrounding","conducted","8","6","prefers","study","included","sites","50","1000m","prefer","including","habitat","reported","habitats","possibly")
+stopwords <- c(stopwords,"11","200","500","9","10","17","objects","site","suggest","type","750","stated","4","surveyed","commonly","preferred","terms","types","chosen","comparing","determine","common","fairly","energy","intake","locations","looked","maximize","mid","net","preferentially","species","randomly","nesting","constructed","landscapes","entrance","thin","forage","conflicted","regularly","lapidarius","pascuorum","withered","ecosystem","existing","lucorum","considered","low","pre","dried", "nested","ground")
+
+## identify stop words
+stop1 <- text_df %>% unnest_tokens(word,text)
+stop2 <- stop1[!stop1$word %in% stopwords,]
+stop3 <- stop2 %>% dplyr::count(word, sort=T)
+
+## Remove stop words and get into long format
+df <- data.frame()
+
+for(i in 1:nrow(text_df)){
+temp <- text_df[i,1]%>%  unnest_tokens(word,text) 
+temp[,"id"] <- paste(i)
+df <- rbind(df, temp)
+}
+
+## remove simple words
+simple.text <- df[!df$word %in% stopwords,]
+
+simple.text <- data.frame(simple.text)
+simple.text[,"value"] <- 1
+
+## replace plurals
+simple.text[simple.text$word=="tussocks","word"] <- "tussock"
+simple.text[simple.text$word=="fences","word"] <- "fence"
+simple.text[simple.text$word=="forests","word"] <- "forest"
+simple.text[simple.text$word=="cavity","word"] <- "cavities"
+simple.text[simple.text$word=="grasslands","word"] <- "grassland"
+simple.text[simple.text$word=="mountains","word"] <- "mountain"
+simple.text[simple.text$word=="interface","word"] <- "interspace"
+simple.text[simple.text$word=="boundaries","word"] <- "boundary"
+
+simple.text <- simple.text[!duplicated(simple.text),] ## remove duplicates
+
+
+## create matrix of ID by words
+matrix.words <- spread(simple.text, word, value, fill=0)
+rownames(matrix.words) <- matrix.words$id
+matrix.words[,1:6] <- NULL
+matrix.words <- cor(t(matrix.words))
+
+## remove perfect matches
+matrix.words[matrix.words==1] <- 0
+
+matrix.words <- data.frame(matrix.words)
+matrix.words[is.na(matrix.words)] <- 0
+```
+
+
+
+### Determine correlations
+```{r}
+
+## merge with original dataframe
+data["id"] <- row.names(data)
+matrix.words["id"] <- row.names(matrix.words)
+data.text <- merge(data, matrix.words, by="id")
+
+## long-wise data
+data.text <- gather(data.text, row.id, correlation, 16:174)
+
+## determine baseline
+mean(data.text$correlation)
+sqrt(var(data.text$correlation)/length(data.text$correlation))*1.96
+
+### compare variables
+
+## IUCN status
+status <- data.text %>% group_by(IUCN.status) %>% summarize(cor=mean(correlation))
+
+## Tounge length
+toungue <- data.text %>% group_by(toungue.length) %>% summarize(cor=mean(correlation))
+
+## subgenus
+subgenus <- data.text %>% group_by(Subgenus) %>% summarize(cor=mean(correlation))
+
+## start month
+smonth <- data.text %>% group_by(Start.month) %>% summarize(cor=mean(correlation))
+
+## end month
+emonth <- data.text %>% group_by(End.month) %>% summarize(cor=mean(correlation))
+
+## geography
+geo <- data.text %>% group_by(Continent) %>% summarize(cor=mean(correlation))
+
+## detection
+detect <- data.text %>% group_by(detection.method) %>% summarize(cor=mean(correlation))
+
+
+## habitat
+Habitat <- data.text %>% group_by(Habitat) %>% summarize(cor=mean(correlation))
+```
+
+## wordclouds
+```{r}
+
+library(wordcloud)
+library(reshape2)
+simple.data <- merge(data, simple.text, by="id")
+cloud.data <- simple.data %>% filter(Start.month!="?") %>%  group_by(Start.month,word) %>% summarize(n=sum(value))
+cloud.data %>% acast(word~Start.month, value.var="n", fill=0) %>% comparison.cloud(max.words=100)
+
+simple.data <- merge(data, simple.text, by="id")
+cloud.data <- simple.data %>% group_by(Subgenus,word) %>% summarize(n=sum(value))
+cloud.data %>% acast(word~Subgenus, value.var="n", fill=0) %>% comparison.cloud(max.words=100, title.size=1, random.order=FALSE)
+
+simple.data <- merge(data, simple.text, by="id")
+cloud.data <- simple.data %>% group_by(IUCN.status,word) %>% summarize(n=sum(value))
+cloud.data %>% acast(word~IUCN.status, value.var="n", fill=0) %>% comparison.cloud(max.words=100, title.size=1.5, random.order=FALSE)
+
+simple.data <- merge(data, simple.text, by="id")
+cloud.data <- simple.data %>% group_by(toungue.length,word) %>% summarize(n=sum(value))
+cloud.data %>% acast(word~toungue.length, value.var="n", fill=0) %>% comparison.cloud(max.words=100)
+
+simple.data <- merge(data, simple.text, by="id")
+cloud.data <- simple.data %>% group_by(End.month,word) %>% summarize(n=sum(value))
+cloud.data %>% acast(word~End.month, value.var="n", fill=0) %>% comparison.cloud(max.words=100)
+
+simple.data <- merge(data, simple.text, by="id")
+cloud.data <- simple.data %>% group_by(Continent,word) %>% summarize(n=sum(value))
+cloud.data %>% acast(word~Continent, value.var="n", fill=0) %>% comparison.cloud(max.words=100,title.size=1.5, random.order=FALSE)
+
+
+simple.data <- merge(data, simple.text, by="id")
+cloud.data <- simple.data %>% group_by(Continent,word) %>% summarize(n=sum(value))
+cloud.data %>% acast(word~Continent, value.var="n", fill=0) %>% comparison.cloud(max.words=100,title.size=1.5, random.order=FALSE)
+
+simple.data <- merge(data, simple.text, by="id")
+cloud.data <- simple.data %>% filter(Habitat!="?") %>%  group_by(Habitat,word) %>% summarize(n=sum(value))
+cloud.data %>% acast(word~Habitat, value.var="n", fill=0) %>% comparison.cloud(max.words=110,title.size=1.5, random.order=FALSE)
+
+simple.data <- merge(data, simple.text, by="id")
+cloud.data <- simple.data %>% filter(level!="?") %>% group_by(level,word) %>% summarize(n=sum(value))
+cloud.data %>% acast(word~level, value.var="n", fill=0) %>% comparison.cloud(max.words=110,title.size=1.5, random.order=FALSE)
